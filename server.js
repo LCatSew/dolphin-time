@@ -10,18 +10,21 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
 // connect to database
-const connection = mysql.createConnection(
-    {
+const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     database: 'employee_manager_db',
     password: 'password',
-    },
-    console.log(`Connected to the employee_manager_db database.`)
-);
+    });
 
+connection.connect(err => {
+    if (err) throw err;
+    console.log(`Connected to the employee_manager_db database.`);
 
-start(() => {
+    start();
+});
+
+function start() {
     inquirer.prompt([
         {
             type: 'list',
@@ -35,48 +38,50 @@ start(() => {
                 'Add Role', 
                 'View All Departments', 
                 'Add Department', 
-                'Quit'
-            ]
+                'Quit',
+            ],
         },
     ])
-        .then((answers) => {
-            switch (answers.choice) {
-                case 'View All Employees':
-                    viewAllEmployees();
-                    break;
-                case 'Add Employee':
-                    addEmployee();
-                    break;
-                case 'Update Employee Role':
-                    updateEmployeeRole();
-                    break;
-                case 'View All Roles':
-                    viewAllRoles();
-                    break;
-                case 'Add Role':
-                    addRole();
-                    break;
-                case 'View All Departments':
-                    viewAllDepartments();
-                    break;
-                case 'Add Department':
-                    addDepartment();
-                    break;
-                case 'Quit':
-                    quit();
-                    break;
-            }
-        })
-});
+    .then((answers) => {
+        switch (answers.toDo) {
+            case 'View All Employees':
+                viewAllEmployees();
+                break;
+            case 'Add Employee':
+                addEmployee();
+                break;
+            case 'Update Employee Role':
+                updateEmployeeRole();
+                break;
+            case 'View All Roles':
+                viewAllRoles();
+                break;
+            case 'Add Role':
+                addRole();
+                break;
+            case 'View All Departments':
+                viewAllDepartments();
+                break;
+            case 'Add Department':
+                addDepartment();
+                break;
+            case 'Quit':
+                quit();
+                break;
+        }
+    });
+}
 
-viewAllEmployees(() => {
-    connection.query('SELECT * FROM employee', function (err, res) {
+start();
+
+function viewAllEmployees() {
+    connection.query('SELECT * FROM employees', function (err, res) {
         if (err) throw err;
         console.table(res);
         inquirer.prompt([
             {
                 type: 'list',
-                name: 'toDo',
+                name: 'choice',
                 message: 'What would you like to do?',
                 choices: [
                     'Main Menu', 
@@ -91,20 +96,21 @@ viewAllEmployees(() => {
                     break;
                 case 'Quit':
                     quit();
+                    break;
             }
-        })
-    })
-});
+        });
+    });
+}
 
 
 
-addEmployee(() => {
+function addEmployee() {
     inquirer.prompt([
         {
             type: 'input',
             name: 'firstName',
             message: 'What is the their first name?',
-            when: (answers) => answers.toDo === 'Add Employee'
+            //when: (answers) => answers.toDo === 'Add Employee'
         },
         {
             type: 'input',
@@ -143,39 +149,42 @@ addEmployee(() => {
                 'None'
             ],
 
-        }
+        },
     ])
-    .then((response) => {
+    .then((answers) => {
+        const { firstName, lastName, newEmployeeRole, newEmployeeManager } = response;
         connection.query('INSERT INTO employees(first_name, last_name, roles_id, manager_id) VALUES (?,?,?,?)', 
-        [response.FirstName, response.LastName, response.EmployeeID, response.ManagerID]), function(err,res) {
+        [firstName, lastName, newEmployeeRole, newEmployeeManager]), 
+        function(err,res) {
             if (err) throw err;
             console.table(res);
             inquirer.prompt([
                 {
                     type: 'list',
                     name: 'choice',
-                    message: 'select an option.',
+                    message: 'Select an option.',
                     choices: [
                         'Main Menu',
                         'Quit'
-                    ]
-                }
+                    ],
+                },
             ])
+            .then ((answer) => {
+                switch (answer.choice) {   
+                    case 'Main Menu':
+                        start();
+                        break;
+                    case 'Quit':
+                        quit();
+                }
+            });
         }
     })
-    .then ((answer) => {
-        switch (answer.choice) {   
-            case 'Main Menu':
-                start();
-                break;
-            case 'Quit':
-                quit();
-        }
-    })
-});
+    
+};
 
-updateEmployeeRole (() => {
-    connection.query('SELECT * FROM employee', function (err, res) {
+function updateEmployeeRole () {
+    connection.query('SELECT * FROM employees', function (err, res) {
         if (err) throw err;
         console.table(res);
         inquirer.prompt([
@@ -183,18 +192,20 @@ updateEmployeeRole (() => {
                 type: 'input',
                 name: 'employeeId',
                 message: 'Enter the Employee Id of the employee you would like to update.',
-                when: (answers) => answers.toDo === 'Update Employee Role'
+                //when: (answers) => answers.toDo === 'Update Employee Role'
             },
             {
                 type: 'input',
                 name: 'employeeRoleUpdate',
                 message: 'What is the new role of the employee?',
-                when: (answers) => typeof answers.employeeId === 'number'
+                //when: (answers) => typeof answers.employeeId === 'number'
             },
         ])
         .then((response) => {
-            connection.query('UPDATE employee SET roles_id = ? WHERE id = ?'),
-            [response.employeeRoleUpdate, response.employeeId], function(err,res) {
+            const { employeeId, employeeRoleUpdate } = response;
+            connection.query('UPDATE employees SET roles_id = ? WHERE id = ?'),
+            [employeeId, employeeRoleUpdate], 
+            function(err,res) {
                 if (err) throw err;
                 console.table(res);
                 inquirer.prompt([
@@ -205,12 +216,39 @@ updateEmployeeRole (() => {
                         choices: [
                             'Main Menu',
                             'Quit'
-                        ]
-                    }
+                        ],
+                    },
                 ])
             }
+            .then((answer) => {
+                switch (answer.choice) {
+                    case 'Main Menu':
+                        start();
+                        break;
+                    case 'Quit':
+                        quit();
+                }
+            });
         })
-        .then ((answer) => {
+    })
+};
+
+function viewAllRoles() {
+    connection.query('SELECT * FROM roles', function (err, res) {
+        if (err) throw err;
+        console.table(res);
+        inquirer.prompt([
+            { 
+            type: 'list',
+            name: 'choice',
+            message: 'select an option.',
+            choices: [
+                'Main Menu',
+                'Quit'
+            ],
+            },
+        ])
+        .then((answer) => {
             switch (answer.choice) {
                 case 'Main Menu':
                     start();
@@ -218,30 +256,23 @@ updateEmployeeRole (() => {
                 case 'Quit':
                     quit();
             }
-        })
+        });
     })
-});
+};
 
-viewAllRoles(() => {
-    connection.query('SELECT * FROM role', function (err, res) {
-        if (err) throw err;
-        console.table(res);
-    })
-});
-
-addRole(() => {
+function addRole() {
     inquirer.prompt([
         {
             type: 'input',
             name: 'addRole',
             message: 'What is the title of the role you would like to add?',
-            when: (answers) => answers.toDo === 'Add Role'
+            //when: (answers) => answers.toDo === 'Add Role'
         },
         {
             type: 'input',
             name: 'addSalary',
             message: 'What is the salary of this role?',
-            when: (answers) => typeof answers.addRole === 'string'
+            //when: (answers) => typeof answers.addRole === 'string'
         },
         {
             type: 'list',
@@ -257,8 +288,9 @@ addRole(() => {
         },
     ])
     .then((response) => {
-        connection.query('INSERT INTO role(title, salary, department_id) VALUES (?,?,?)', 
-        [response.addRole, response.addSalary, response.departmentSelect]), function(err,res) {
+        const { addRole, addSalary, departmentSelect } = response;
+        connection.query('INSERT INTO roles (title, salary, department_id) VALUES (?,?,?)', 
+        [addRole, addSalary, departmentSelect]), function(err,res) {
             if (err) throw err;
             console.table(res);
             inquirer.prompt([
@@ -269,23 +301,24 @@ addRole(() => {
                     choices: [
                         'Main Menu',
                         'Quit'
-                    ]
-                }
+                    ],
+                },
             ])
+            .then ((answer) => {
+                switch (answer.choice) {
+                    case 'Main Menu':
+                        start();
+                        break;
+                    case 'Quit':
+                        quit();
+                }
+            })
         }
     })
-    .then ((answer) => {
-        switch (answer.choice) {
-            case 'Main Menu':
-                start();
-                break;
-            case 'Quit':
-                quit();
-        }
-    })
-});
+    
+};
 
-addDepartment(() => {
+function addDepartment() {
     inquirer.prompt([
         {
             type: 'input',
@@ -295,8 +328,10 @@ addDepartment(() => {
         },
     ])
     .then((response) => {
-        connection.query('INSERT INTO department(name) VALUES (?)', 
-        [response.addDepartment]), function(err,res) {
+        const { addDepartment } = response;
+        connection.query('INSERT INTO departments(name) VALUES (?)', 
+        [addDepartment]), 
+        function(err,res) {
             if (err) throw err;
             console.table(res);
             inquirer.prompt([
@@ -307,9 +342,29 @@ addDepartment(() => {
                     choices: [
                         'Main Menu',
                         'Quit'
-                    ]
-                }
+                    ],
+                },
             ])
+            .then ((answer) => {
+                switch (answer.choice) {
+                    case 'Main Menu':
+                        start();
+                        break;
+                    case 'Quit':
+                        quit();
+                        break
+                }
+            });
         }
     })
+};
+
+function quit() {
+    console.log('Goodbye!');
+    process.exit();
+    
+}
+
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
 });
