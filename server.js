@@ -72,35 +72,46 @@ function start() {
     });
 }
 
-start();
+// start();
 
 function viewAllEmployees() {
-    connection.query('SELECT * FROM employees', function (err, res) {
-        if (err) throw err;
-        console.table(res);
-        inquirer.prompt([
-            {
-                type: 'list',
-                name: 'choice',
-                message: 'What would you like to do?',
-                choices: [
-                    'Main Menu', 
-                    'Quit'
-                ]
-            }
-        ])
-        .then ((answer) => {
-            switch (answer.choice) {   
-                case 'Main Menu':
-                    start();
-                    break;
-                case 'Quit':
-                    quit();
-                    break;
-            }
-        });
+const query = `
+    SELECT 
+    employees.id, 
+    employees.first_name, 
+    employees.last_name, 
+    roles.title AS role, 
+    CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM 
+    employees
+    INNER JOIN roles ON employees.role_id = roles.id
+    LEFT JOIN employees manager ON employees.manager_id = manager.id
+`;
+connection.query(query, function (err, res) {
+    if (err) throw err;
+    console.table(res);
+    inquirer
+    .prompt([
+        {
+        type: 'list',
+        name: 'choice',
+        message: 'What would you like to do?',
+        choices: ['Main Menu', 'Quit'],
+        },
+    ])
+    .then((answer) => {
+        switch (answer.choice) {
+        case 'Main Menu':
+            start();
+            break;
+        case 'Quit':
+            quit();
+            break;
+        }
     });
-}
+});
+};
+
 
 
 
@@ -152,12 +163,14 @@ function addEmployee() {
         },
     ])
     .then((answers) => {
-        const { firstName, lastName, newEmployeeRole, newEmployeeManager } = response;
-        connection.query('INSERT INTO employees(first_name, last_name, roles_id, manager_id) VALUES (?,?,?,?)', 
-        [firstName, lastName, newEmployeeRole, newEmployeeManager]), 
-        function(err,res) {
-            if (err) throw err;
-            console.table(res);
+        const { firstName, lastName, newEmployeeRole, newEmployeeManager } = answers;
+        connection.query(
+            "INSERT INTO employees (first_name, last_name, role_id, manager_id) SELECT ?, ?, roles.id, employees.id FROM roles, employees WHERE roles.title = ? AND CONCAT(employees.first_name, ' ', employees.last_name) = ?",
+            [firstName, lastName, newEmployeeRole, newEmployeeManager],
+            function (err, res) {
+                if (err) throw err;
+                console.log("Employee added successfully!");
+                console.table(res);
             inquirer.prompt([
                 {
                     type: 'list',
@@ -179,8 +192,8 @@ function addEmployee() {
                 }
             });
         }
-    })
-    
+    );
+});
 };
 
 function updateEmployeeRole () {
