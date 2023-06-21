@@ -247,7 +247,17 @@ function updateEmployeeRole () {
 };
 
 function viewAllRoles() {
-    connection.query('SELECT * FROM roles', function (err, res) {
+    const query=`
+    SELECT 
+        roles.id, 
+        roles.title AS role, 
+        roles.salary,
+        departments.name AS department
+    FROM 
+        roles
+    INNER JOIN departments ON roles.department_id = departments.id
+    `;
+    connection.query(query, function (err, res) {
         if (err) throw err;
         console.table(res);
         inquirer.prompt([
