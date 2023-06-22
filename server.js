@@ -433,6 +433,36 @@ function addDepartment() {
     })
 };
 
+function viewAllDepartments() {
+    const query = `
+    SELECT * FROM departments
+    `;
+    connection.query(query, function (err, res) {
+        if (err) throw err;
+        console.table(res);
+        inquirer.prompt([
+            {
+                type: 'list',
+                name: 'choice',
+                message: 'select an option.',
+                choices: [
+                    'Main Menu',
+                    'Quit'
+                ],
+            },
+        ])
+        .then ((answer) => {
+            switch (answer.choice) {
+                case 'Main Menu':
+                    start();
+                    break;
+                case 'Quit':
+                    quit();
+            }   
+        });
+    });
+};
+
 function quit() {
     console.log('Goodbye!');
     process.exit();
