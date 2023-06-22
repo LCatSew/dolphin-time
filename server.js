@@ -226,16 +226,26 @@ function updateEmployeeRole () {
         ])
         .then((answers) => {
             const { employeeId, employeeRoleUpdate } = answers;
-            connection.query(`
-            UPDATE employees (roles_id)
-            SELECT roles_id, employees_id 
-            roles.id, 
-            roles.title AS role, 
-            FROM roles, employees
-            WHERE roles.id = ?`),
-            [employeeId, employeeRoleUpdate], 
-            function(err,res) {
+        
+            // Step 1: Retrieve the role_id based on the input role string
+            connection.query('SELECT id FROM roles WHERE title = ?', [employeeRoleUpdate], function (err, res) {
+            if (err) throw err;
+        
+            // Check if the role exists
+            if (res.length === 0) {
+                console.log('Invalid role. Please try again.');
+                // Call the updateEmployeeRole function again to restart the process
+                updateEmployeeRole();
+                return;
+            }
+        
+            const roleId = res[0].id;
+        
+            // Step 2: Update the role_id in the employees table
+            connection.query('UPDATE employees SET role_id = ? WHERE id = ?', [roleId, employeeId], function (err, res) {
                 if (err) throw err;
+        
+                console.log('Employee role updated successfully!');
                 console.table(res);
                 inquirer.prompt([
                     {
@@ -248,7 +258,6 @@ function updateEmployeeRole () {
                         ],
                     },
                 ])
-            }
             .then((answer) => {
                 switch (answer.choice) {
                     case 'Main Menu':
@@ -258,9 +267,12 @@ function updateEmployeeRole () {
                         quit();
                 }
             });
-        })
-    })
+        });
+    });
+});
+});
 };
+
 
 function viewAllRoles() {
     const query=`
