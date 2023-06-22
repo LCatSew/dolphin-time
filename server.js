@@ -165,7 +165,11 @@ function addEmployee() {
     .then((answers) => {
         const { firstName, lastName, newEmployeeRole, newEmployeeManager } = answers;
         connection.query(
-            "INSERT INTO employees (first_name, last_name, role_id, manager_id) SELECT ?, ?, roles.id, employees.id FROM roles, employees WHERE roles.title = ? AND CONCAT(employees.first_name, ' ', employees.last_name) = ?",
+            `INSERT INTO employees (first_name, last_name, role_id, manager_id) 
+            SELECT ?, ?, roles.id, employees.id 
+            FROM roles, employees 
+            WHERE roles.title = ? 
+            AND CONCAT(employees.first_name, ' ', employees.last_name) = ?`,
             [firstName, lastName, newEmployeeRole, newEmployeeManager],
             function (err, res) {
                 if (err) throw err;
@@ -197,7 +201,13 @@ function addEmployee() {
 };
 
 function updateEmployeeRole () {
-    connection.query('SELECT * FROM employees', function (err, res) {
+    connection.query(`SELECT employees.id, 
+    employees.first_name, 
+    employees.last_name, 
+    roles.title AS role
+    FROM employees
+    INNER JOIN roles ON employees.role_id = roles.id
+    `, function (err, res) {
         if (err) throw err;
         console.table(res);
         inquirer.prompt([
@@ -214,9 +224,15 @@ function updateEmployeeRole () {
                 //when: (answers) => typeof answers.employeeId === 'number'
             },
         ])
-        .then((response) => {
-            const { employeeId, employeeRoleUpdate } = response;
-            connection.query('UPDATE employees SET roles_id = ? WHERE id = ?'),
+        .then((answers) => {
+            const { employeeId, employeeRoleUpdate } = answers;
+            connection.query(`
+            UPDATE employees (roles_id)
+            SELECT roles_id, employees_id 
+            roles.id, 
+            roles.title AS role, 
+            FROM roles, employees
+            WHERE roles.id = ?`),
             [employeeId, employeeRoleUpdate], 
             function(err,res) {
                 if (err) throw err;
