@@ -390,49 +390,6 @@ function addRole() {
     });
 };
 
-
-
-function addDepartment() {
-    inquirer.prompt([
-        {
-            type: 'input',
-            name: 'addDepartment',
-            message: 'What is the title of the department you would like to add?',
-            when: (answers) => answers.toDo === 'Add Department'
-        },
-    ])
-    .then((response) => {
-        const { addDepartment } = response;
-        connection.query('INSERT INTO departments(name) VALUES (?)', 
-        [addDepartment]), 
-        function(err,res) {
-            if (err) throw err;
-            console.table(res);
-            inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'choice',
-                    message: 'select an option.',
-                    choices: [
-                        'Main Menu',
-                        'Quit'
-                    ],
-                },
-            ])
-            .then ((answer) => {
-                switch (answer.choice) {
-                    case 'Main Menu':
-                        start();
-                        break;
-                    case 'Quit':
-                        quit();
-                        break
-                }
-            });
-        }
-    })
-};
-
 function viewAllDepartments() {
     const query = `
     SELECT * FROM departments
@@ -462,6 +419,46 @@ function viewAllDepartments() {
         });
     });
 };
+
+function addDepartment() {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'addDepartment',
+            message: 'What is the title of the department you would like to add?',
+        },
+    ])
+    .then((response) => {
+        const { addDepartment } = response;
+        connection.query('INSERT INTO departments (name) VALUES (?)', [addDepartment], function(err, res) {
+            if (err) throw err;
+            console.table(res);
+            inquirer.prompt([
+                {
+                    type: 'list',
+                    name: 'choice',
+                    message: 'select an option.',
+                    choices: [
+                        'Main Menu',
+                        'Quit'
+                    ],
+                },
+            ])
+            .then((answer) => {
+                switch (answer.choice) {
+                    case 'Main Menu':
+                        start();
+                        break;
+                    case 'Quit':
+                        quit();
+                        break;
+                }
+            });
+        });
+    });
+}
+
+
 
 function quit() {
     console.log('Goodbye!');
