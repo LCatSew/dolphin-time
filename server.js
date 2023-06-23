@@ -81,13 +81,10 @@ function viewAllEmployees() {
     //will read role title and connect it to the corresponding role id
 const query = `
     SELECT 
-        employees.id, 
-        employees.first_name, 
-        employees.last_name, 
-        roles.title AS role, 
+    employees.id, employees.first_name, employees.last_name, roles.title AS role, 
     CONCAT(manager.first_name, ' ', manager.last_name) AS manager
     FROM 
-        employees
+    employees
     INNER JOIN roles ON employees.role_id = roles.id
     LEFT JOIN employees manager ON employees.manager_id = manager.id
 `;
@@ -169,13 +166,13 @@ function addEmployee() {
         const { firstName, lastName, newEmployeeRole, newEmployeeManager } = answers;
         connection.query(
             `INSERT INTO 
-                employees (first_name, last_name, role_id, manager_id) 
+            employees (first_name, last_name, role_id, manager_id) 
             SELECT 
-                ?, ?, roles.id, employees.id 
+            ?, ?, roles.id, employees.id 
             FROM 
-                roles, employees 
+            roles, employees 
             WHERE 
-                roles.title = ? 
+            roles.title = ? 
             AND CONCAT(employees.first_name, ' ', employees.last_name) = ?`,
             [firstName, lastName, newEmployeeRole, newEmployeeManager],
             function (err, res) {
@@ -210,12 +207,10 @@ function addEmployee() {
 function updateEmployeeRole () {
     connection.query(`
     SELECT 
-        employees.id, 
-        employees.first_name, 
-        employees.last_name, 
+    employees (id, first_name, last_name),
     roles.title AS role
     FROM 
-        employees
+    employees
     INNER JOIN roles ON employees.role_id = roles.id
     `, function (err, res) {
         if (err) throw err;
