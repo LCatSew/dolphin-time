@@ -10,24 +10,35 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// connect to database
-const connection = mysql.createConnection({
+//With connection pooling, connections are managed automatically. Connection pool handles the connection management for you.
+//connectiom pooling enhances the performance and scalability of executing database queries.
+const pool = mysql.createPool({
     host: 'localhost',
     user: 'root',
     database: 'employee_manager_db',
     password: 'password',
 });
 
-connection.connect(err => {
-    if (err) throw err;
-    console.log(`Connected to the employee_manager_db database.`);
+const util = require('util');
 
-    start();
-});
 
-function start() {
-    inquirer.prompt([
-        {//this is considered the main menu
+// Helper function to handle database queries
+function queryDatabase(sql, values) {
+    return new Promise((resolve, reject) => {
+        pool.query(sql, values, (err, res) => {
+            if (err) {
+            reject(err);
+            } else {
+            resolve(res);
+            }
+        });
+    });
+}
+
+
+function promptMainMenu() {
+    return inquirer.prompt([
+        {
             type: 'list',
             name: 'toDo',
             message: 'What would you like to do?',
@@ -43,81 +54,81 @@ function start() {
             ],
         },
     ])
-    .then((answers) => {
-        //this is the switch statement that will run the function based on the user's choice
-        switch (answers.toDo) {
-            case 'View All Employees':
-                viewAllEmployees();
-                break;
-            case 'Add Employee':
-                addEmployee();
-                break;
-            case 'Update Employee Role':
-                updateEmployeeRole();
-                break;
-            case 'View All Roles':
-                viewAllRoles();
-                break;
-            case 'Add Role':
-                addRole();
-                break;
-            case 'View All Departments':
-                viewAllDepartments();
-                break;
-            case 'Add Department':
-                addDepartment();
-                break;
-            case 'Quit':
-                quit();
-                break;
-        }
-    });
 }
 
 
-function viewAllEmployees() {
-    //selects the emplopee's id, first name, last name, role, and manager from the employee table
-    //concats the manager's first and last name as one column
-    //will read role title and connect it to the corresponding role id
-const query = `
-    SELECT 
-    employees.id, employees.first_name, employees.last_name, roles.title AS role, 
-    CONCAT(manager.first_name, ' ', manager.last_name) AS manager
-    FROM 
-    employees
-    INNER JOIN roles ON employees.role_id = roles.id
-    LEFT JOIN employees manager ON employees.manager_id = manager.id
-`;
-connection.query(query, function (err, res) {
-    if (err) throw err;
-    console.table(res);
-    inquirer
-    .prompt([
-        {
-        type: 'list',
-        name: 'choice',
-        message: 'What would you like to do?',
-        choices: ['Main Menu', 'Quit'],
-        },
-    ])
-    .then((answer) => {
-        switch (answer.choice) {
-        case 'Main Menu':
-            start();
+
+// Handle the user's choice from the main menu
+// asynchronous functions provides better control over asynchronous operations, improves code readability, and enables efficient error handling in asynchronous workflows.
+async function handleMainMenuChoice(choice) {
+    //switch statement will run the function based on the user's choice (case)
+    switch (choice) {
+        case 'View All Employees':
+            await viewAllEmployees();
+            break;
+        case 'Add Employee':
+            await addEmployee();
+            break;
+        case 'Update Employee Role':
+            await updateEmployeeRole();
+            break;
+        case 'View All Roles':
+            await viewAllRoles();
+            break;
+        case 'Add Role':
+            await addRole();
+            break;
+        case 'View All Departments':
+            await viewAllDepartments();
+            break;
+        case 'Add Department':
+            await addDepartment();
             break;
         case 'Quit':
             quit();
             break;
+    };
+}
+
+async function viewAllEmployees() {
+    const query = `
+        SELECT 
+            employees.id, employees.first_name, employees.last_name, roles.title AS role, 
+            CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+        FROM 
+            employees
+        INNER JOIN roles ON employees.role_id = roles.id
+        LEFT JOIN employees manager ON employees.manager_id = manager.id
+    `;
+    // INNER JOIN only includes matching rows, while LEFT JOIN includes all rows from the left table and matching rows from the right table.
+    try {
+        const res = await queryDatabase(query);
+        console.table(res);
+
+        const answer = await inquirer.prompt([
+            {
+            type: 'list',
+            name: 'choice',
+            message: 'What would you like to do?',
+            choices: ['Main Menu', 'Quit'],
+            },
+        ]);
+        if (answer.choice === 'Main Menu') {
+            start();
+        } else {
+            quit();
         }
-    });
-});
-};
+    } catch (err) {
+        console.log(err);
+    }
+}
 
 
 
 
-function addEmployee() {
-    inquirer.prompt([
+async function addEmployee() {
+    try {
+        const answers = await inquirer.prompt([
         {
             type: 'input',
             name: 'firstName',
@@ -161,61 +172,56 @@ function addEmployee() {
             ],
 
         },
-    ])
-    .then((answers) => {
-        const { firstName, lastName, newEmployeeRole, newEmployeeManager } = answers;
-        connection.query(
-            `INSERT INTO 
+    ]);
+    const { firstName, lastName, newEmployeeRole, newEmployeeManager } = answers;
+    const query =
+        `INSERT INTO 
             employees (first_name, last_name, role_id, manager_id) 
-            SELECT 
+        SELECT 
             ?, ?, roles.id, employees.id 
-            FROM 
+        FROM 
             roles, employees 
-            WHERE 
+        WHERE 
             roles.title = ? 
-            AND CONCAT(employees.first_name, ' ', employees.last_name) = ?`,
-            [firstName, lastName, newEmployeeRole, newEmployeeManager],
-            function (err, res) {
-                if (err) throw err;
-                console.log("Employee added successfully!");
-                console.table(res);
-            inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'choice',
-                    message: 'Select an option.',
-                    choices: [
-                        'Main Menu',
-                        'Quit'
-                    ],
-                },
-            ])
-            .then ((answer) => {
-                switch (answer.choice) {   
-                    case 'Main Menu':
-                        start();
-                        break;
-                    case 'Quit':
-                        quit();
-                }
-            });
-        }
-    );
-});
-};
+        AND CONCAT(employees.first_name, ' ', employees.last_name) = ?`;
+        await queryDatabase(query, [firstName, lastName, newEmployeeRole, newEmployeeManager]);
+        console.log("Employee added successfully!");
+        //console.table(res);
+        const answer = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'choice',
+                message: 'Select an option.',
+                choices: [
+                    'Main Menu',
+                    'Quit'
+                ],
+            },
+        ]);
+        
+            if (answer.choice === 'Main Menu') {   
+                    start();
+            } else {
+                    quit();
+            }
+    } catch (err) {
+        console.log(err);
+    }
+}
 
-function updateEmployeeRole () {
-    connection.query(`
-    SELECT 
-    employees (id, first_name, last_name),
-    roles.title AS role
-    FROM 
-    employees
-    INNER JOIN roles ON employees.role_id = roles.id
-    `, function (err, res) {
-        if (err) throw err;
+async function updateEmployeeRole () {
+    const query =`
+        SELECT 
+            employees (id, first_name, last_name), roles.title AS role
+        FROM 
+            employees
+        INNER JOIN roles ON employees.role_id = roles.id
+    `;
+    try {
+        const res = await queryDatabase(query);
         console.table(res);
-        inquirer.prompt([
+
+        const answer = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'employeeId',
@@ -261,37 +267,35 @@ function updateEmployeeRole () {
                             ],
                         },
                     ])
-                .then((answer) => {
-                    switch (answer.choice) {
-                        case 'Main Menu':
+                .then ((answer) => {
+                    if (answer.choice === 'Main Menu') {   
                             start();
-                            break;
-                        case 'Quit':
+                    } else {
                             quit();
                     }
                 });
             });
-        });
+        })
     });
-});
+    } catch (err) {
+        console.log(err);
+    };
 };
 
 
-function viewAllRoles() {
+async function viewAllRoles() {
     const query=`
-    SELECT 
-        roles.id, 
-        roles.title AS role, 
-        roles.salary,
-        departments.name AS department
-    FROM 
-        roles
-    INNER JOIN departments ON roles.department_id = departments.id
+        SELECT 
+            roles.id, roles.title AS role, roles.salary, departments.name AS department
+        FROM 
+            roles
+        INNER JOIN departments ON roles.department_id = departments.id
     `;
-    connection.query(query, function (err, res) {
-        if (err) throw err;
+    try {
+        const res = await queryDatabase(query);
         console.table(res);
-        inquirer.prompt([
+
+        const answer = await inquirer.prompt([
             { 
             type: 'list',
             name: 'choice',
@@ -302,42 +306,46 @@ function viewAllRoles() {
             ],
             },
         ])
-        .then((answer) => {
-            switch (answer.choice) {
-                case 'Main Menu':
+        .then ((answer) => {
+            if (answer.choice === 'Main Menu') {   
                     start();
-                    break;
-                case 'Quit':
+            } else {
                     quit();
             }
         });
-    })
+    } catch (err) {
+        console.log(err);
+    }
 };
 
-function addRole() {
-    inquirer.prompt([
-        {
-            type: 'input',
-            name: 'addRole',
-            message: 'What is the title of the role you would like to add?',
-        },
-        {
-            type: 'input',
-            name: 'addSalary',
-            message: 'What is the salary of this role?',
-        },
-        {
-            type: 'list',
-            name: 'departmentSelect',
-            message: 'What department does this role belong to?',
-            choices: [
-                'Engineering',
-                'Finance',
-                'Legal',
-                'Sales',
-                'Service',
-            ],
-        },
+async function addRole() {
+    try {
+        const res = await queryDatabase(query);
+        console.table(res);
+
+        const answer = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'addRole',
+                message: 'What is the title of the role you would like to add?',
+            },
+            {
+                type: 'input',
+                name: 'addSalary',
+                message: 'What is the salary of this role?',
+            },
+            {
+                type: 'list',
+                name: 'departmentSelect',
+                message: 'What department does this role belong to?',
+                choices: [
+                    'Engineering',
+                    'Finance',
+                    'Legal',
+                    'Sales',
+                    'Service',
+                ],
+            },
     ])
     .then((answer) => {
         const {addRole, addSalary, departmentSelect} = answer;
@@ -372,27 +380,29 @@ function addRole() {
                     },
                 ])
                 .then ((answer) => {
-                    switch (answer.choice) {
-                        case 'Main Menu':
+                    if (answer.choice === 'Main Menu') {   
                             start();
-                            break;
-                        case 'Quit':
+                    } else {
                             quit();
                     }
                 });
             });
         });
     });
+    } catch (err) {
+        console.log(err);
+    }
 };
 
-function viewAllDepartments() {
+async function viewAllDepartments() {
     const query = `
     SELECT * FROM departments
     `;
-    connection.query(query, function (err, res) {
-        if (err) throw err;
+    try {
+        const res = await queryDatabase(query);
         console.table(res);
-        inquirer.prompt([
+
+        const answer = await inquirer.prompt([
             {
                 type: 'list',
                 name: 'choice',
@@ -404,25 +414,30 @@ function viewAllDepartments() {
             },
         ])
         .then ((answer) => {
-            switch (answer.choice) {
-                case 'Main Menu':
+            if (answer.choice === 'Main Menu') {   
                     start();
-                    break;
-                case 'Quit':
+            } else {
                     quit();
-            }   
+            }
         });
-    });
+    } catch (err) {
+        console.log(err);
+    }
 };
 
-function addDepartment() {
-    inquirer.prompt([
-        {
-            type: 'input',
-            name: 'addDepartment',
-            message: 'What is the title of the department you would like to add?',
-        },
-    ])
+async function addDepartment() {
+
+    try {
+        const res = await queryDatabase(query);
+        console.table(res);
+
+        const answer = await inquirer.prompt([
+            {
+                type: 'input',
+                name: 'addDepartment',
+                message: 'What is the title of the department you would like to add?',
+            },
+        ])
     .then((response) => {
         const { addDepartment } = response;
         connection.query('INSERT INTO departments (name) VALUES (?)', [addDepartment], function(err, res) {
@@ -439,18 +454,18 @@ function addDepartment() {
                     ],
                 },
             ])
-            .then((answer) => {
-                switch (answer.choice) {
-                    case 'Main Menu':
+            .then ((answer) => {
+                if (answer.choice === 'Main Menu') {   
                         start();
-                        break;
-                    case 'Quit':
+                } else {
                         quit();
-                        break;
                 }
             });
         });
     });
+    } catch (err) {
+        console.log(err);
+    }
 }
 
 
@@ -464,3 +479,12 @@ function quit() {
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+// Start the application
+function start() {
+    promptMainMenu()
+    .then((answers) => handleMainMenuChoice(answers.toDo))
+    .catch((err) => console.error('Error:', err));
+}
+
+start();
