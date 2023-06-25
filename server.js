@@ -125,7 +125,6 @@ async function viewAllEmployees() {
 
 
 
-
 async function addEmployee() {
     try {
         const answers = await inquirer.prompt([
@@ -185,8 +184,7 @@ async function addEmployee() {
             roles.title = ? 
         AND CONCAT(employees.first_name, ' ', employees.last_name) = ?`;
         await queryDatabase(query, [firstName, lastName, newEmployeeRole, newEmployeeManager]);
-        console.log("Employee added successfully!");
-        //console.table(res);
+        console.log(`Added ${firstName} ${lastName} to the database.`);
         const answer = await inquirer.prompt([
             {
                 type: 'list',
@@ -212,7 +210,7 @@ async function addEmployee() {
 async function updateEmployeeRole () {
     const query =`
         SELECT 
-            employees (id, first_name, last_name), roles.title AS role
+            employees. id, employees.first_name, employees.last_name, roles.title AS role
         FROM 
             employees
         INNER JOIN roles ON employees.role_id = roles.id
@@ -221,7 +219,7 @@ async function updateEmployeeRole () {
         const res = await queryDatabase(query);
         console.table(res);
 
-        const answer = await inquirer.prompt([
+        const answers = await inquirer.prompt([
             {
                 type: 'input',
                 name: 'employeeId',
@@ -232,51 +230,44 @@ async function updateEmployeeRole () {
                 name: 'employeeRoleUpdate',
                 message: 'What is the new role of the employee?',
             },
-        ])
-            .then((answers) => {
-                const { employeeId, employeeRoleUpdate } = answers;
+        ]);
+        const { employeeId, employeeRoleUpdate } = answers;
             
-                connection.query('SELECT id FROM roles WHERE title = ?', [employeeRoleUpdate], function (err, res) {
-                if (err) throw err;
+        const queryAgain = 'SELECT id FROM roles WHERE title = ?';
+        const [rolerRow] = await queryDatabase (queryAgain, [employeeRoleUpdate]);
+        
             
-                // Check if the role exists
-                if (res.length === 0) {
-                    console.log('Invalid role. Please try again.');
-                    // Call the updateEmployeeRole function again to restart the process
-                    updateEmployeeRole();
-                    return;
-                }
-                
-                //res[0] is the first row of the result set, and id is the value of the id column in that row.
-                const roleId = res[0].id;
+        // Check if the role exists
+        if (rolerRow.length === 0) {
+            console.log('Invalid role. Please try again.');
+            // Call the updateEmployeeRole function again to restart the process
+            updateEmployeeRole();
+            return;
+        }
+        
+        const roleId = rolerRow.id;
             
-                // Step 2: Update the role_id in the employees table
-                connection.query('UPDATE employees SET role_id = ? WHERE id = ?', [roleId, employeeId], function (err, res) {
-                    if (err) throw err;
+        // Step 2: Update the role_id in the employees table
+        const queryUpdate = 'UPDATE employees SET role_id = ? WHERE id = ?'; 
+        await queryDatabase (queryUpdate, [roleId, employeeId]);
             
-                    console.log('Employee role updated successfully!');
-                    console.table(res);
-                    inquirer.prompt([
-                        {
-                            type: 'list',
-                            name: 'choice',
-                            message: 'select an option.',
-                            choices: [
-                                'Main Menu',
-                                'Quit'
-                            ],
-                        },
-                    ])
-                .then ((answer) => {
-                    if (answer.choice === 'Main Menu') {   
-                            start();
-                    } else {
-                            quit();
-                    }
-                });
-            });
-        })
-    });
+        console.log(`Employee ${employeeId}'s role ha been updated to ${employeeRoleUpdate} successfully! `);
+        const answerAgain = inquirer.prompt([
+            {
+                type: 'list',
+                name: 'choice',
+                message: 'select an option.',
+                choices: [
+                    'Main Menu',
+                    'Quit'
+                ],
+            },
+        ]);
+        if (answerAgain === 'Main Menu') { 
+            start();
+        } else {
+            quit();
+        }
     } catch (err) {
         console.log(err);
     };
@@ -297,22 +288,20 @@ async function viewAllRoles() {
 
         const answer = await inquirer.prompt([
             { 
-            type: 'list',
-            name: 'choice',
-            message: 'select an option.',
-            choices: [
-                'Main Menu',
-                'Quit'
-            ],
+                type: 'list',
+                name: 'choice',
+                message: 'select an option.',
+                choices: [
+                    'Main Menu',
+                    'Quit'
+                ],
             },
-        ])
-        .then ((answer) => {
-            if (answer.choice === 'Main Menu') {   
-                    start();
-            } else {
-                    quit();
-            }
-        });
+        ]);
+        if (answer.choice === 'Main Menu') {   
+                start();
+        } else {
+                quit();
+        }
     } catch (err) {
         console.log(err);
     }
@@ -320,9 +309,6 @@ async function viewAllRoles() {
 
 async function addRole() {
     try {
-        const res = await queryDatabase(query);
-        console.table(res);
-
         const answer = await inquirer.prompt([
             {
                 type: 'input',
@@ -346,49 +332,44 @@ async function addRole() {
                     'Service',
                 ],
             },
-    ])
-    .then((answer) => {
-        const {addRole, addSalary, departmentSelect} = answer;
-        connection.query(`SELECT id FROM roles WHERE title = ?`, [addRole], function(err,res) {
-            if (err) throw err;
+    ]);
+    const {addRole, addSalary, departmentSelect} = answer;
 
-            // Check if the role exists by chcking the length of the result set. Anything more than zero means the role exists.
-            if (res.length > 0) {
-                console.log('Role already exists. Please try again.');
-                // Call the addRole function again to restart the process
-                addRole();
-                return;
-            }
+    //make sure the role doesn't already exist
+    const query = `SELECT id FROM roles WHERE title = ?`;
+    const roleRows = await queryDatabase (query, [addRole]);
 
-            console.table(res);
-
-            connection.query(`
-            INSERT INTO roles (title, salary, department_id)
-            SELECT ?, ?, departments.id
-            FROM departments
-            WHERE departments.name =?`, [addRole, addSalary, departmentSelect], function(err, res) {
-                if (err) throw err;
-                inquirer.prompt([
-                    {
-                        type: 'list',
-                        name: 'choice',
-                        message: 'select an option.',
-                        choices: [
-                            'Main Menu',
-                            'Quit'
-                        ],
-                    },
-                ])
-                .then ((answer) => {
-                    if (answer.choice === 'Main Menu') {   
-                            start();
-                    } else {
-                            quit();
-                    }
-                });
-            });
-        });
-    });
+        // Check if the role exists by chcking the length of the result set. Anything more than zero means the role exists.
+        if (roleRows.length > 0) {
+            console.log('Role already exists. Please try again.');
+            // Call the addRole function again to restart the process
+            addRole();
+            return;
+        }
+    
+        const queryAgain = `
+        INSERT INTO roles (title, salary, department_id)
+        SELECT ?, ?, departments.id
+        FROM departments
+        WHERE departments.name =?` ;
+        await queryDatabase (queryAgain, [addRole, addSalary, departmentSelect]); 
+        const answers = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'choice',
+                message: 'select an option.',
+                choices: [
+                    'Main Menu',
+                    'Quit'
+                ],
+            },
+        ]);
+                
+        if (answers.choice === 'Main Menu') {   
+                start();
+        } else {
+                quit();
+        }
     } catch (err) {
         console.log(err);
     }
