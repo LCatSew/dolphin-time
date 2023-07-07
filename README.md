@@ -12,6 +12,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
+- [Challenges](#challenges)
 - [Deployment](#deployment)
 - [Questions](#questions)
 
@@ -24,6 +25,10 @@ To install the project you will want to start by running npm i. after you'll log
 ## Contributing
 
 I referenced [this](https://github.com/ajcuddeback/EmployeeTracker) repository for my initial creation to get an idea of how to structure my folders, but ended up making a lot of changes after that.
+
+## Challenges
+
+I created an entire database, worked through the bugs, and could have submitted my assignment then. But I wanted to make sure the database would be scalable. Not that scalability was necessary for this assignment, but it is a good skill to have and be able to demonstrate to potential employers.
 
 ## Deployment
 
