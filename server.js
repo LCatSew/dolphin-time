@@ -309,71 +309,65 @@ async function viewAllRoles() {
 
 async function addRole() {
     try {
-        const answer = await inquirer.prompt([
-            {
-                type: 'input',
-                name: 'addRole',
-                message: 'What is the title of the role you would like to add?',
-            },
-            {
-                type: 'input',
-                name: 'addSalary',
-                message: 'What is the salary of this role?',
-            },
-            {
-                type: 'list',
-                name: 'departmentSelect',
-                message: 'What department does this role belong to?',
-                choices: [
-                    'Engineering',
-                    'Finance',
-                    'Legal',
-                    'Sales',
-                    'Service',
-                ],
-            },
+    const answer = await inquirer.prompt([
+        {
+        type: 'input',
+        name: 'addRole',
+        message: 'What is the title of the role you would like to add?',
+        },
+        {
+        type: 'input',
+        name: 'addSalary',
+        message: 'What is the salary of this role?',
+        },
+        {
+        type: 'list',
+        name: 'departmentSelect',
+        message: 'What department does this role belong to?',
+        choices: ['Engineering', 'Finance', 'Legal', 'Sales', 'Service'],
+        },
     ]);
-    const {addRole, addSalary, departmentSelect} = answer;
+    const { addRole, addSalary, departmentSelect } = answer;
 
-    //make sure the role doesn't already exist
+    // Make sure the role doesn't already exist
     const query = `SELECT id FROM roles WHERE title = ?`;
-    const roleRows = await queryDatabase (query, [addRole]);
+    const roleRows = await queryDatabase(query, [addRole]);
 
-        // Check if the role exists by chcking the length of the result set. Anything more than zero means the role exists.
-        if (roleRows.length > 0) {
-            console.log('Role already exists. Please try again.');
-            // Call the addRole function again to restart the process
-            addRole();
-            return;
-        }
-    
+    // Check if the role exists by checking the length of the result set. Anything more than zero means the role exists.
+    if (roleRows.length > 0) {
+        console.log('Role already exists. Please try again.');
+        // Call the addRole function again to restart the process
+        addRole();
+        return;
+    } else {
         const queryAgain = `
         INSERT INTO roles (title, salary, department_id)
         SELECT ?, ?, departments.id
         FROM departments
-        WHERE departments.name =?` ;
-        await queryDatabase (queryAgain, [addRole, addSalary, departmentSelect]); 
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'choice',
-                message: 'select an option.',
-                choices: [
-                    'Main Menu',
-                    'Quit'
-                ],
-            },
-        ]);
-                
-        if (answers.choice === 'Main Menu') {   
-                start();
-        } else {
-                quit();
-        }
-    } catch (err) {
-        console.log(err);
+        WHERE departments.name = ?`;
+        await queryDatabase(queryAgain, [addRole, addSalary, departmentSelect]);
+        console.log(`Added ${addRole} Role to the database.`);
     }
-};
+
+    const answers = await inquirer.prompt([
+        {
+        type: 'list',
+        name: 'choice',
+        message: 'Select an option.',
+        choices: ['Main Menu', 'Quit'],
+        },
+    ]);
+
+    if (answers.choice === 'Main Menu') {
+        start();
+    } else {
+        quit();
+    }
+    } catch (err) {
+    console.log(err);
+    }
+}
+  
 
 async function viewAllDepartments() {
     const query = `
@@ -393,25 +387,19 @@ async function viewAllDepartments() {
                     'Quit'
                 ],
             },
-        ])
-        .then ((answer) => {
-            if (answer.choice === 'Main Menu') {   
-                    start();
-            } else {
-                    quit();
-            }
-        });
+        ]);
+        if (answer.choice === 'Main Menu') {   
+                start();
+        } else {
+                quit();
+        }
     } catch (err) {
         console.log(err);
     }
 };
 
 async function addDepartment() {
-
     try {
-        const res = await queryDatabase(query);
-        console.table(res);
-
         const answer = await inquirer.prompt([
             {
                 type: 'input',
@@ -419,31 +407,27 @@ async function addDepartment() {
                 message: 'What is the title of the department you would like to add?',
             },
         ])
-    .then((response) => {
-        const { addDepartment } = response;
-        connection.query('INSERT INTO departments (name) VALUES (?)', [addDepartment], function(err, res) {
-            if (err) throw err;
-            console.table(res);
-            inquirer.prompt([
-                {
-                    type: 'list',
-                    name: 'choice',
-                    message: 'select an option.',
-                    choices: [
-                        'Main Menu',
-                        'Quit'
-                    ],
-                },
-            ])
-            .then ((answer) => {
-                if (answer.choice === 'Main Menu') {   
-                        start();
-                } else {
-                        quit();
-                }
-            });
-        });
-    });
+    const { addDepartment } = answer;
+    const query = 'INSERT INTO departments (name) VALUES (?)'; 
+    await queryDatabase (query, [addDepartment]);
+
+    console.log(`Added ${addDepartment} Department to the database.`);
+    const response = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'choice',
+            message: 'select an option.',
+            choices: [
+                'Main Menu',
+                'Quit'
+            ],
+        },
+    ]);
+    if (response.choice === 'Main Menu') {   
+            start();
+    } else {
+            quit();
+    }
     } catch (err) {
         console.log(err);
     }

@@ -4,6 +4,7 @@ VALUES
     ('Finance'),
     ('Legal'),
     ('Sales');
+    ('Service')
 
 INSERT INTO roles (title, department_id, salary)
 VALUES
