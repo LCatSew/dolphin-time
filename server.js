@@ -38,9 +38,9 @@ function queryDatabase(sql, values) {
 function promptTitle() {
 
     console.log(`
-    ========================
-    Employee Manager
-    ========================
+    =========================
+    EMPLOYEE MANAGER DATABASE
+    =========================
     `);
 }
 
