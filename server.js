@@ -35,6 +35,14 @@ function queryDatabase(sql, values) {
     });
 }
 
+function promptTitle() {
+
+    console.log(`
+    ========================
+    Employee Manager
+    ========================
+    `);
+}
 
 function promptMainMenu() {
     return inquirer.prompt([
@@ -447,6 +455,7 @@ app.listen(PORT, () => {
 
 // Start the application
 function start() {
+    promptTitle()
     promptMainMenu()
     .then((answers) => handleMainMenuChoice(answers.toDo))
     .catch((err) => console.error('Error:', err));
