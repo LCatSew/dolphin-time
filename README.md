@@ -12,6 +12,7 @@
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
+- [Deployment](#deployment)
 - [Questions](#questions)
 
 
@@ -23,6 +24,10 @@ To install the project you will want to start by running npm i. after you'll log
 ## Contributing
 
 I referenced [this](https://github.com/ajcuddeback/EmployeeTracker) repository for my initial creation to get an idea of how to structure my folders, but ended up making a lot of changes after that.
+
+## Deployment
+
+https://watch.screencastify.com/v/cmIfYJ1NX7pZ0B5vcbAR
 
 
 ## Questions 
